@@ -1,0 +1,30 @@
+# GiveWP / WordPress → standard fields
+# Source: WordPress Admin → Donations → Tools/Export → CSV (GiveWP export).
+# Only needed if GiveWP records gifts NOT already captured in your Stripe/PayPal
+# exports — otherwise you'd double-count. Decide one system of record per gateway.
+source: givewp
+mappings:
+  - {source_column: "Date",                 standard_field: donation_date}
+  - {source_column: "Amount",               standard_field: amount}
+  - {source_column: "Currency",             standard_field: currency}
+  - {source_column: "Payment ID",           standard_field: source_txn_id}
+  - {source_column: "Payment Gateway",      standard_field: null}   # stripe/paypal — informational
+  - {source_column: "Payment Status",       standard_field: null}   # keep only "complete"/"publish"
+  - {source_column: "First Name",           standard_field: first_name}
+  - {source_column: "Last Name",            standard_field: last_name}
+  - {source_column: "Email",                standard_field: email}
+  - {source_column: "Address Line 1",       standard_field: address_line1}
+  - {source_column: "Address Line 2",       standard_field: address_line2}
+  - {source_column: "City",                 standard_field: city}
+  - {source_column: "State",                standard_field: state}
+  - {source_column: "Zip",                  standard_field: postal_code}
+  - {source_column: "Country",              standard_field: country}
+  - {source_column: "Form Name",            standard_field: campaign}
+  - {source_column: "Fund",                 standard_field: fund}
+defaults:
+  payment_method: card
+notes: >
+  IMPORTANT double-count risk: GiveWP usually routes through Stripe/PayPal, so the
+  same gift can appear in both the GiveWP export AND the Stripe/PayPal export. Pick a
+  single system of record per gateway, or dedupe on source_txn_id / gateway id across
+  batches. Keep only completed/published payment statuses.

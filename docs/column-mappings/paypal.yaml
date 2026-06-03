@@ -1,0 +1,28 @@
+# PayPal → standard fields
+# Source: PayPal → Activity → Download → CSV (Balance affecting / Completed).
+source: paypal
+mappings:
+  - {source_column: "Date",               standard_field: donation_date}
+  - {source_column: "Gross",              standard_field: amount}
+  - {source_column: "Fee",                standard_field: fee}     # PayPal fee is negative; take abs value
+  - {source_column: "Net",                standard_field: net}
+  - {source_column: "Currency",           standard_field: currency}
+  - {source_column: "Transaction ID",     standard_field: source_txn_id}
+  - {source_column: "From Email Address",  standard_field: email}
+  - {source_column: "Name",               standard_field: null}    # "First Last" — split on import
+  - {source_column: "Contact Phone Number", standard_field: phone}
+  - {source_column: "Address Line 1",     standard_field: address_line1}
+  - {source_column: "Address Line 2/District/Neighborhood", standard_field: address_line2}
+  - {source_column: "Town/City",          standard_field: city}
+  - {source_column: "State/Province/Region/County/Territory/Prefecture/Republic", standard_field: state}
+  - {source_column: "Zip/Postal Code",    standard_field: postal_code}
+  - {source_column: "Country",            standard_field: country}
+  - {source_column: "Type",               standard_field: null}    # e.g. "Subscription Payment" → is_recurring
+  - {source_column: "Subject",            standard_field: notes}
+defaults:
+  payment_method: paypal
+notes: >
+  PayPal "Fee" is typically negative — store as positive cents. Filter the export to
+  donation/payment rows; PayPal CSVs include transfers, holds, and currency
+  conversions you do NOT want as donations. Type = "Subscription Payment"/"Recurring
+  Payment" → set is_recurring=1.

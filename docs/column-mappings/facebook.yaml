@@ -1,0 +1,23 @@
+# Facebook / Meta donations → standard fields
+# Source: Meta for Business / Facebook Payouts → donation report CSV, OR the
+# nonprofit's email'd payout report. Facebook intentionally LIMITS donor PII —
+# you often get only a name and no email/address, which makes matching harder.
+source: facebook
+mappings:
+  - {source_column: "Charge Date",         standard_field: donation_date}
+  - {source_column: "Donation Amount",     standard_field: amount}
+  - {source_column: "Fee",                 standard_field: fee}     # often 0 — Meta waives fees for nonprofits
+  - {source_column: "Net Payout Amount",   standard_field: net}
+  - {source_column: "Currency",            standard_field: currency}
+  - {source_column: "Payment ID",          standard_field: source_txn_id}
+  - {source_column: "Donor Name",          standard_field: null}    # "First Last" — split; frequently the ONLY donor field
+  - {source_column: "Donor Email",         standard_field: email}   # often blank
+  - {source_column: "Fundraiser Title",    standard_field: campaign}
+  - {source_column: "Campaign",            standard_field: campaign}
+defaults:
+  payment_method: card
+notes: >
+  Facebook withholds most donor contact info, so many rows will have name-only.
+  These commonly land as new donors or as duplicate_candidates (name-only match).
+  Expect to merge later once a donor gives through a richer channel. Payouts are
+  batched — Charge Date (per-donation) is preferred over payout date when available.

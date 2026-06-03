@@ -1,0 +1,28 @@
+# Stripe → standard fields
+# Source: Stripe Dashboard → Payments → Export (or the Balance/Payouts "all activity" CSV).
+# Stripe column names depend on which export you pick; these match the Payments export.
+source: stripe
+mappings:
+  - {source_column: "Created date (UTC)",        standard_field: donation_date}
+  - {source_column: "Amount",                    standard_field: amount}
+  - {source_column: "Fee",                        standard_field: fee}
+  - {source_column: "Amount Refunded",            standard_field: null}   # handle refunds separately
+  - {source_column: "Converted Amount",           standard_field: null}
+  - {source_column: "Currency",                   standard_field: currency}
+  - {source_column: "id",                         standard_field: source_txn_id}   # ch_/pi_ id
+  - {source_column: "Customer Email",             standard_field: email}
+  - {source_column: "Card Name",                  standard_field: null}   # often "First Last"; split if used
+  - {source_column: "Customer Description",       standard_field: null}
+  - {source_column: "Description",                standard_field: notes}
+  # Stripe metadata varies — these appear if you set them on Checkout/Payment Links:
+  - {source_column: "metadata[campaign]",         standard_field: campaign}
+  - {source_column: "metadata[fund]",             standard_field: fund}
+  - {source_column: "metadata[first_name]",       standard_field: first_name}
+  - {source_column: "metadata[last_name]",        standard_field: last_name}
+defaults:
+  payment_method: card
+notes: >
+  Net is not a direct column on the Payments export — compute net = amount - fee.
+  Recurring (subscription) charges carry an "invoice"/subscription id; if you export
+  with that column, map it to recurring detection. Billing address may appear as
+  separate "Card Address ..." columns depending on settings.

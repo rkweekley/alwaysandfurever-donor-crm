@@ -1,0 +1,29 @@
+# Zeffy → standard fields
+# Source: Zeffy → Payments/Contacts → Export CSV. Zeffy is fee-free, so fee is
+# usually 0 (donor-covered tips are separate and are NOT charity revenue).
+source: zeffy
+mappings:
+  - {source_column: "Payment Date",       standard_field: donation_date}
+  - {source_column: "Amount",             standard_field: amount}
+  - {source_column: "Tip",                standard_field: null}    # Zeffy tip to Zeffy — not a donation to the org
+  - {source_column: "Total Amount",       standard_field: null}
+  - {source_column: "First Name",         standard_field: first_name}
+  - {source_column: "Last Name",          standard_field: last_name}
+  - {source_column: "Email",              standard_field: email}
+  - {source_column: "Phone",              standard_field: phone}
+  - {source_column: "Address",            standard_field: address_line1}
+  - {source_column: "City",               standard_field: city}
+  - {source_column: "State",              standard_field: state}
+  - {source_column: "Postal Code",        standard_field: postal_code}
+  - {source_column: "Country",            standard_field: country}
+  - {source_column: "Form Name",          standard_field: campaign}
+  - {source_column: "Frequency",          standard_field: null}    # "Monthly"/"One-time" → is_recurring
+  - {source_column: "Payment ID",         standard_field: source_txn_id}
+  - {source_column: "In Honor/Memory Of", standard_field: tribute_honoree}
+defaults:
+  payment_method: card
+  fee: 0
+notes: >
+  Zeffy charges the donor no platform fee, so fee defaults to 0 and net = amount.
+  Frequency = "Monthly"/"Recurring" → is_recurring=1. Map "In Honor/Memory Of" to a
+  tribute; the importer can ask whether it's in_honor vs in_memory.

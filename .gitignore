@@ -1,0 +1,40 @@
+# Secrets & config
+.env
+.env.*
+*.key
+*.pem
+credentials.json
+secrets.*
+
+# Real donor data — NEVER commit. Only sanitized files in samples/ that end in .sample
+*.csv
+*.xlsx
+*.xls
+!samples/*.sample.csv
+!samples/*.sample.xlsx
+
+# Databases
+*.sqlite
+*.sqlite3
+*.db
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+build/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

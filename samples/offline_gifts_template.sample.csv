@@ -1,0 +1,6 @@
+Date,First Name,Last Name,Organization,Email,Phone,Address,City,State,Zip,Amount,Source,Payment Method,Check Number,Fund,Campaign,In Honor/Memory,In-Kind Description,Notes
+2026-01-15,Jane,Sample,,jane@example.com,555-0100,12 Maple St,Beverly,OH,45715,100.00,check,check,1042,general,Spring Appeal,,,Mailed check
+2026-02-02,John,Example,,,,,,,,50.00,cash,cash,,medical,,,,Dropped at front desk
+2026-02-20,,,"Acme Pet Supply Co",giving@acme.example,555-0188,,,,,250.00,corporate,other,,general,,,,Corporate sponsor
+2026-03-01,Pat,Donor,,pat@example.com,,,,,,0.00,wishlist_chewy,in_kind,,general,,,"2 cases dog food, est $60",Chewy wishlist gift
+2026-03-10,Sam,Memorial,,sam@example.com,555-0143,9 Oak Ave,Marietta,OH,45750,75.00,check,check,2210,medical,,In memory of Max,,Pet memorial gift

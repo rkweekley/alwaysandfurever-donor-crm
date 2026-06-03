@@ -1,0 +1,35 @@
+# Offline gifts (checks, cash, in-kind, wishlist, event, auction, corporate,
+# matching gifts) → standard fields.
+#
+# There's no platform export for these — staff enter them, often via a simple
+# spreadsheet you keep and import periodically. Use ONE row per gift. Set the
+# `source` column per row (check, cash, in_kind, wishlist_amazon, corporate, ...).
+source: offline
+mappings:
+  - {source_column: "Date",            standard_field: donation_date}
+  - {source_column: "First Name",      standard_field: first_name}
+  - {source_column: "Last Name",       standard_field: last_name}
+  - {source_column: "Organization",    standard_field: organization_name}
+  - {source_column: "Email",           standard_field: email}
+  - {source_column: "Phone",           standard_field: phone}
+  - {source_column: "Address",         standard_field: address_line1}
+  - {source_column: "City",            standard_field: city}
+  - {source_column: "State",           standard_field: state}
+  - {source_column: "Zip",             standard_field: postal_code}
+  - {source_column: "Amount",          standard_field: amount}   # for in-kind, use estimated fair value
+  - {source_column: "Source",          standard_field: source}   # check | cash | in_kind | wishlist_* | corporate | event | auction | matching_gift
+  - {source_column: "Payment Method",  standard_field: payment_method}
+  - {source_column: "Check Number",    standard_field: notes}
+  - {source_column: "Fund",            standard_field: fund}
+  - {source_column: "Campaign",        standard_field: campaign}
+  - {source_column: "In Honor/Memory", standard_field: tribute_honoree}
+  - {source_column: "In-Kind Description", standard_field: notes}
+  - {source_column: "Notes",           standard_field: notes}
+defaults:
+  fee: 0
+notes: >
+  A blank spreadsheet template for staff to fill lives at
+  samples/offline_gifts_template.sample.csv. For in-kind/wishlist gifts set the
+  amount to the estimated fair-market value (or leave blank and record the item in
+  the description) and mark is_in_kind on import. Matching gifts from a company can
+  use organization_name with the employee recorded in notes.
