@@ -4,69 +4,206 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}Donor CRM{% endblock %} — Always &amp; Furever</title>
+<link rel="icon" sizes="32x32" href="{{ url_for('static', filename='favicon-32.png') }}">
+<link rel="apple-touch-icon" href="{{ url_for('static', filename='favicon-192.png') }}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  :root{--ink:#1f2933;--muted:#6b7280;--line:#e5e7eb;--bg:#f7f7f5;
-        --brand:#2f6f4f;--brand2:#b5651d;--card:#fff;--accent:#eef5f0;}
+  :root{
+    /* Always & Furever brand */
+    --brand:#017BB5;        /* primary blue */
+    --brand-dark:#014769;   /* deep navy-blue */
+    --brand2:#1FA84A;       /* accent green (toned from logo #32E071) */
+    --green-bright:#32E071;
+    --ink:#141B38;          /* navy text */
+    --muted:#6b7686;
+    --line:#e9eef4;
+    --bg:#f5f8fc;
+    --card:#fff;
+    --accent:#eef6fc;       /* light-blue surface */
+    --sidebar-w:236px;
+    --shadow-sm:0 1px 2px rgba(20,27,56,.05);
+    --shadow:0 2px 8px rgba(20,27,56,.06),0 1px 2px rgba(20,27,56,.04);
+    --shadow-lg:0 10px 30px rgba(20,27,56,.10);
+    --r:16px;
+  }
   *{box-sizing:border-box}
-  body{margin:0;font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg)}
+  body{margin:0;font:15px/1.55 "Red Hat Display",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased}
   a{color:var(--brand);text-decoration:none}
   a:hover{text-decoration:underline}
-  header{background:var(--brand);color:#fff;padding:0 20px}
-  header .wrap{display:flex;align-items:center;gap:22px;max-width:1100px;margin:0 auto;height:56px}
-  header .brand{font-weight:700;font-size:17px;color:#fff}
-  header .brand small{font-weight:400;opacity:.8}
-  header nav{display:flex;gap:18px;margin-left:auto}
-  header nav a{color:#e7f0ea;font-size:14px}
-  header nav a:hover{color:#fff;text-decoration:none}
-  .container{max-width:1100px;margin:24px auto;padding:0 20px}
-  h1{font-size:22px;margin:0 0 4px}
-  h2{font-size:16px;margin:24px 0 10px;color:var(--ink)}
-  .sub{color:var(--muted);margin:0 0 18px;font-size:14px}
+  h1,h2,h3{font-family:"Red Hat Display",sans-serif;letter-spacing:-.02em}
+
+  /* ---- App shell: fixed sidebar + topbar ---- */
+  .app{display:flex;min-height:100vh}
+  .sidebar{width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
+    background:linear-gradient(185deg,#015a86 0%,var(--brand-dark) 55%,#013a57 100%);color:#fff;
+    display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:20}
+  .sidebar .brand{display:flex;align-items:center;gap:10px;padding:20px 20px 18px;border-bottom:1px solid rgba(255,255,255,.08)}
+  .sidebar .brand img{height:34px;width:auto;display:block}
+  .sidebar .brand .crm{font-weight:600;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--green-bright);padding:3px 8px;border:1px solid rgba(50,224,113,.4);border-radius:999px}
+  .sidebar nav{display:flex;flex-direction:column;gap:3px;padding:16px 14px;flex:1}
+  .sidebar nav .navlabel{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(207,230,243,.5);padding:6px 12px 4px;font-weight:600}
+  .sidebar nav a{display:flex;align-items:center;gap:12px;color:#cfe6f3;font-size:14px;font-weight:500;padding:10px 12px;border-radius:11px;transition:background .14s,color .14s}
+  .sidebar nav a:hover{color:#fff;background:rgba(255,255,255,.09);text-decoration:none}
+  .sidebar nav a.active{color:#fff;background:rgba(255,255,255,.14);box-shadow:inset 3px 0 0 var(--green-bright)}
+  .sidebar nav a .ic{width:20px;text-align:center;font-size:15px;opacity:.95}
+  .sidebar .foot{padding:16px 20px;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:#9fc4d8;line-height:1.5}
+
+  .main{flex:1;margin-left:var(--sidebar-w);display:flex;flex-direction:column;min-width:0}
+  .topbar{height:64px;background:rgba(255,255,255,.85);backdrop-filter:saturate(160%) blur(8px);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:16px;padding:0 30px;position:sticky;top:0;z-index:10}
+  .topbar .page-title{font-weight:700;font-size:17px;color:var(--ink);letter-spacing:-.02em}
+  .topbar .spacer{margin-left:auto}
+  .usermenu{position:relative}
+  .usermenu .trigger{display:flex;align-items:center;gap:10px;background:none;border:1px solid var(--line);
+    padding:5px 12px 5px 6px;border-radius:999px;cursor:pointer;color:var(--ink);transition:background .14s,box-shadow .14s}
+  .usermenu .trigger:hover{background:#fff;box-shadow:var(--shadow-sm)}
+  .usermenu .avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--brand),var(--brand-dark));color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+  .usermenu .who{display:flex;flex-direction:column;line-height:1.15;text-align:left}
+  .usermenu .who .nm{font-size:13px;font-weight:600}
+  .usermenu .who .rl{font-size:11px;color:var(--muted);text-transform:capitalize}
+  .usermenu .caret{color:var(--muted);font-size:11px}
+  .usermenu .drop{position:absolute;right:0;top:50px;background:#fff;border:1px solid var(--line);
+    border-radius:14px;box-shadow:var(--shadow-lg);min-width:200px;padding:7px;display:none}
+  .usermenu.open .drop{display:block}
+  .usermenu .drop .em{padding:9px 11px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line);margin-bottom:4px;word-break:break-all}
+  .usermenu .drop button.link{width:100%;text-align:left;background:none;border:none;padding:10px 11px;border-radius:9px;cursor:pointer;color:var(--ink);font-size:14px}
+  .usermenu .drop button.link:hover{background:var(--accent)}
+
+  .container{max-width:1180px;margin:26px auto;padding:0 30px;width:100%}
+  h1{font-size:25px;font-weight:800;margin:0 0 4px}
+  h2{font-size:15px;font-weight:700;margin:26px 0 12px;color:var(--ink);text-transform:none;letter-spacing:-.01em}
+  .sub{color:var(--muted);margin:0 0 20px;font-size:14px}
+
+  /* ---- Stat cards ---- */
   .grid{display:grid;gap:16px}
-  .cards{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px}
-  .stat{font-size:26px;font-weight:700;color:var(--brand)}
+  .cards{grid-template-columns:repeat(auto-fit,minmax(195px,1fr))}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;box-shadow:var(--shadow-sm);transition:box-shadow .16s,transform .16s}
+  .card:hover{box-shadow:var(--shadow)}
+  .stat-card .top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+  .ic-chip{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;flex:0 0 auto}
+  .ic-chip.blue{background:#e3f2fb;color:var(--brand)}
+  .ic-chip.green{background:#e4f6ec;color:var(--brand2)}
+  .ic-chip.navy{background:#e6eef4;color:var(--brand-dark)}
+  .ic-chip.amber{background:#fdf0d9;color:#b07208}
+  .stat{font-size:28px;font-weight:800;color:var(--ink);letter-spacing:-.025em;line-height:1.1;font-variant-numeric:tabular-nums}
   .stat.alt{color:var(--brand2)}
-  .label{color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.03em}
-  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
-  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);font-size:14px}
-  th{background:var(--accent);font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:#3f5c4d}
+  .label{color:var(--muted);font-size:12.5px;font-weight:600;letter-spacing:.01em;margin-top:3px}
+  .sublabel{color:var(--muted);font-size:12px;margin-top:8px}
+  .sublabel b{color:var(--ink);font-weight:600}
+
+  /* ---- Panels ---- */
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow-sm);padding:18px 20px}
+  .panel h2{margin:0 0 14px}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .panel-head h2{margin:0}
+
+  /* ---- Bar chart (pure CSS, no JS) ---- */
+  .chart{display:flex;align-items:flex-end;gap:14px;height:150px;padding:8px 4px 0}
+  .chart .bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:7px;height:100%}
+  .chart .bar{width:100%;max-width:54px;min-height:4px;border-radius:8px 8px 0 0;
+    background:linear-gradient(180deg,#2aa3d6 0%,var(--brand) 70%,var(--brand-dark) 100%);transition:filter .14s}
+  .chart .bar-wrap:hover .bar{filter:brightness(1.08)}
+  .chart .bar-val{font-size:11px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+  .chart .bar-label{font-size:11px;color:var(--muted)}
+
+  /* ---- Tables ---- */
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+  th,td{text-align:left;padding:11px 15px;border-bottom:1px solid var(--line);font-size:14px}
+  th{background:#fafcfe;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  tbody tr:hover td,tr:hover td{background:#fafcfe}
   tr:last-child td{border-bottom:none}
-  .right{text-align:right}
-  .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;background:var(--accent);color:#3f5c4d}
-  .pill.warn{background:#fdeccd;color:#92560f}
+  .right{text-align:right;font-variant-numeric:tabular-nums}
+  .panel table,.panel table th{border:none}
+  .panel table{border-radius:0}
+  .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:500;background:var(--accent);color:var(--brand-dark)}
+  .pill.warn{background:#fdf0d9;color:#92560f}
+  .pill.good{background:#e4f6ec;color:#1a7a3a}
   .muted{color:var(--muted)}
   input,select,button,textarea{font:inherit}
-  input[type=text],input[type=date],input[type=search],select,textarea{padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:#fff}
-  .btn{display:inline-block;background:var(--brand);color:#fff;border:none;padding:8px 14px;border-radius:7px;cursor:pointer}
-  .btn:hover{background:#27593f;text-decoration:none}
-  .btn.sm{padding:5px 10px;font-size:13px}
+  input[type=text],input[type=date],input[type=search],input[type=password],select,textarea{padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:#fff}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(1,123,181,.12)}
+  .btn{display:inline-block;background:var(--brand);color:#fff;border:none;padding:9px 16px;border-radius:9px;cursor:pointer;font-weight:600;transition:background .14s}
+  .btn:hover{background:var(--brand-dark);text-decoration:none}
+  .btn.sm{padding:6px 11px;font-size:13px}
   form.inline{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-  .flash{background:#eef5f0;border:1px solid #cfe3d6;color:#2f6f4f;padding:10px 14px;border-radius:8px;margin-bottom:16px}
-  .flex{display:flex;gap:24px;flex-wrap:wrap}
-  .col{flex:1;min-width:280px}
-  .demo{background:#fff7ec;border-bottom:1px solid #f0dcc0;color:#92560f;font-size:13px;text-align:center;padding:5px}
+  .flash{background:var(--accent);border:1px solid #cfe6f5;color:var(--brand-dark);padding:11px 15px;border-radius:11px;margin-bottom:16px}
+  .flex{display:flex;gap:20px;flex-wrap:wrap}
+  .col{flex:1;min-width:300px}
+  .demo{background:#fff7ec;border-bottom:1px solid #f0dcc0;color:#92560f;font-size:13px;text-align:center;padding:6px}
+
+  @media (max-width:760px){
+    :root{--sidebar-w:0px}
+    .sidebar{transform:translateX(-100%)}
+    .main{margin-left:0}
+    .container{padding:0 18px}
+  }
 </style>
 </head>
 <body>
-<div class="demo">Demo data — Phase 1 prototype. No real donor records.</div>
-<header>
-  <div class="wrap">
-    <span class="brand">🐾 Always &amp; Furever <small>Donor CRM</small></span>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="{{ url_for('static', filename='nav-logo.svg') }}" alt="Always &amp; Furever">
+      <span class="crm">CRM</span>
+    </div>
     <nav>
-      <a href="{{ url_for('dashboard') }}">Dashboard</a>
-      <a href="{{ url_for('donors') }}">Donors</a>
-      <a href="{{ url_for('donations') }}">Donations</a>
-      <a href="{{ url_for('reports') }}">Reports</a>
-      <a href="{{ url_for('import_page') }}">Import</a>
+      {% set ep = request.endpoint %}
+      <span class="navlabel">Overview</span>
+      <a href="{{ url_for('dashboard') }}" class="{{ 'active' if ep == 'dashboard' }}"><span class="ic">▤</span> Dashboard</a>
+      <a href="{{ url_for('donors') }}" class="{{ 'active' if ep in ['donors','donor_detail'] }}"><span class="ic">♥</span> Donors</a>
+      <a href="{{ url_for('donations') }}" class="{{ 'active' if ep == 'donations' }}"><span class="ic">$</span> Donations</a>
+      <span class="navlabel">Tools</span>
+      <a href="{{ url_for('reports') }}" class="{{ 'active' if ep == 'reports' }}"><span class="ic">▦</span> Reports</a>
+      <a href="{{ url_for('import_page') }}" class="{{ 'active' if ep == 'import_page' }}"><span class="ic">↥</span> Import</a>
     </nav>
+    <div class="foot">Always &amp; Furever<br>Donor CRM · Phase 1</div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <span class="page-title">{% block page_title %}{{ self.title() }}{% endblock %}</span>
+      <span class="spacer"></span>
+      {% set u = current_user() %}
+      {% if u %}
+      <div class="usermenu" id="usermenu">
+        <button class="trigger" type="button" onclick="document.getElementById('usermenu').classList.toggle('open')">
+          <span class="avatar">{{ (u['display_name'] or u['username'])[0]|upper }}</span>
+          <span class="who">
+            <span class="nm">{{ u['display_name'] or u['username'] }}</span>
+            <span class="rl">{{ u['role'] }}</span>
+          </span>
+          <span class="caret">▾</span>
+        </button>
+        <div class="drop">
+          <div class="em">{{ u['email'] or u['username'] }}</div>
+          <form method="post" action="{{ url_for('logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="link" type="submit">Sign out</button>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="demo">Demo data — Phase 1 prototype. No real donor records.</div>
+
+    <div class="container">
+      {% with msgs = get_flashed_messages() %}
+        {% for m in msgs %}<div class="flash">{{ m }}</div>{% endfor %}
+      {% endwith %}
+      {% block body %}{% endblock %}
+    </div>
   </div>
-</header>
-<div class="container">
-  {% with msgs = get_flashed_messages() %}
-    {% for m in msgs %}<div class="flash">{{ m }}</div>{% endfor %}
-  {% endwith %}
-  {% block body %}{% endblock %}
 </div>
+<script>
+  // close the user menu when clicking outside it
+  document.addEventListener('click', function(e){
+    var m = document.getElementById('usermenu');
+    if (m && !m.contains(e.target)) m.classList.remove('open');
+  });
+</script>
 </body>
 </html>

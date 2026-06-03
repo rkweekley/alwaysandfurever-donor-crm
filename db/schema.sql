@@ -63,6 +63,8 @@ CREATE TABLE users (
     display_name  TEXT NOT NULL,
     email         TEXT,
     role          TEXT NOT NULL DEFAULT 'staff', -- 'admin' | 'staff' | 'readonly'  (Phase 2 enforcement)
+    password_hash TEXT,                          -- werkzeug pbkdf2/scrypt hash; NULL = cannot log in
+    last_login    TEXT,                          -- ISO timestamp of most recent successful login
     is_active     INTEGER NOT NULL DEFAULT 1,
     created_at    TEXT NOT NULL DEFAULT (datetime('now'))
 );

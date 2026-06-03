@@ -6,6 +6,7 @@ Safe to re-run: it rebuilds donor_crm.sqlite from scratch each time.
 NO REAL DONOR DATA lives here — all names below are invented.
 """
 import os, sqlite3, hashlib
+from werkzeug.security import generate_password_hash
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 DB = os.path.join(BASE, "donor_crm.sqlite")
@@ -27,9 +28,14 @@ def main():
     with open(SEED) as f:
         db.executescript(f.read())
 
-    # staff user for note authorship
-    db.execute("INSERT INTO users (username, display_name, email, role) VALUES (?,?,?,?)",
-               ("ksmith", "Karen Smith", "karen@alwaysandfurever.org", "admin"))
+    # staff user for note authorship + login.
+    # Demo password can be overridden with SEED_ADMIN_PASSWORD; defaults to a
+    # known dev value that we print at the end so the operator can sign in.
+    admin_pw = os.environ.get("SEED_ADMIN_PASSWORD", "furever-demo")
+    db.execute("INSERT INTO users (username, display_name, email, role, password_hash) "
+               "VALUES (?,?,?,?,?)",
+               ("ksmith", "Karen Smith", "karen@alwaysandfurever.org", "admin",
+                generate_password_hash(admin_pw, method="pbkdf2:sha256")))
 
     def sid(code):
         return db.execute("SELECT id FROM sources WHERE code=?", (code,)).fetchone()[0]
@@ -171,6 +177,11 @@ def main():
     tot = db.execute("SELECT COALESCE(SUM(amount_cents),0) FROM donations").fetchone()[0]
     db.close()
     print(f"Seeded {n_d} donors, {n_g} donations, total ${tot/100:,.2f} -> {DB}")
+    print("-" * 56)
+    print("  Demo login:  username  ksmith")
+    print(f"               password  {admin_pw}")
+    print("  (override with SEED_ADMIN_PASSWORD env var before seeding)")
+    print("-" * 56)
 
 
 if __name__ == "__main__":
