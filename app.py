@@ -95,7 +95,7 @@ def dashboard():
     followups = q("""
         SELECT n.id, n.follow_up_date, n.note_text, dn.id AS donor_id,
                COALESCE(NULLIF(TRIM(COALESCE(dn.first_name,'')||' '||COALESCE(dn.last_name,'')),''),
-                        dn.organization_name, '(unnamed)') AS donor_name
+                        dn.organization_name, dn.household_name, '(unnamed)') AS donor_name
         FROM donor_notes n JOIN donors dn ON dn.id = n.donor_id
         WHERE n.follow_up_needed = 1 AND n.follow_up_done = 0
         ORDER BY n.follow_up_date LIMIT 10
@@ -239,7 +239,7 @@ def reports():
                       ORDER BY donation_total_cents DESC LIMIT 10""")
     no_address = q("""SELECT id,
                       COALESCE(NULLIF(TRIM(COALESCE(first_name,'')||' '||COALESCE(last_name,'')),''),
-                               organization_name,'(unnamed)') AS name, primary_email
+                               organization_name, household_name,'(unnamed)') AS name, primary_email
                       FROM donors WHERE is_merged=0 AND (address_line1 IS NULL OR address_line1='')
                       ORDER BY donation_total_cents DESC LIMIT 50""")
     need_receipt = q("""SELECT COUNT(*) AS c, COALESCE(SUM(amount_cents),0) AS amt
