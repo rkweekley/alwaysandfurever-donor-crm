@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block body %}
+<h1>Reports</h1>
+<p class="sub">Phase 1 summary reports. Export to CSV/XLSX is a next-phase add.</p>
+
+<div class="grid cards">
+  <div class="card"><div class="label">Recurring Revenue</div><div class="stat">{{ recurring_rev.gross|money }}</div><div class="muted">{{ recurring_rev.gifts }} gifts</div></div>
+  <div class="card"><div class="label">Gifts Needing Receipts</div><div class="stat alt">{{ need_receipt.c }}</div><div class="muted">{{ need_receipt.amt|money }}</div></div>
+</div>
+
+<div class="flex">
+  <div class="col">
+    <h2>Donations by Source</h2>
+    <table>
+      <tr><th>Source</th><th class="right">Gifts</th><th class="right">Gross</th><th class="right">Fees</th><th class="right">Net</th></tr>
+      {% for r in by_source %}
+      <tr><td>{{ r.label }}</td><td class="right">{{ r.gifts }}</td><td class="right">{{ r.gross|money }}</td>
+          <td class="right">{{ r.fees|money }}</td><td class="right">{{ r.net|money }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+  <div class="col">
+    <h2>Top Donors</h2>
+    <table>
+      <tr><th>Donor</th><th class="right">Gifts</th><th class="right">Total</th></tr>
+      {% for r in top_donors %}
+      <tr><td><a href="{{ url_for('donor_detail', donor_id=r.id) }}">{{ r.name }}</a></td>
+          <td class="right">{{ r.gift_count }}</td><td class="right">{{ r.donation_total_cents|money }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+
+<div class="flex">
+  <div class="col">
+    <h2>By Campaign</h2>
+    <table>
+      <tr><th>Campaign</th><th class="right">Gifts</th><th class="right">Gross</th></tr>
+      {% for r in by_campaign %}<tr><td>{{ r.label }}</td><td class="right">{{ r.gifts }}</td><td class="right">{{ r.gross|money }}</td></tr>{% endfor %}
+    </table>
+  </div>
+  <div class="col">
+    <h2>By Fund / Designation</h2>
+    <table>
+      <tr><th>Fund</th><th class="right">Gifts</th><th class="right">Gross</th></tr>
+      {% for r in by_fund %}<tr><td>{{ r.label }}</td><td class="right">{{ r.gifts }}</td><td class="right">{{ r.gross|money }}</td></tr>{% endfor %}
+    </table>
+  </div>
+</div>
+
+<h2>Donors Without Mailing Addresses ({{ no_address|length }})</h2>
+<p class="sub">These can't receive year-end letters or tribute cards.</p>
+<table>
+  <tr><th>Donor</th><th>Email</th></tr>
+  {% for r in no_address %}
+  <tr><td><a href="{{ url_for('donor_detail', donor_id=r.id) }}">{{ r.name }}</a></td><td>{{ r.primary_email or '—' }}</td></tr>
+  {% else %}<tr><td colspan="2" class="muted">Everyone has an address. 🎉</td></tr>{% endfor %}
+</table>
+{% endblock %}

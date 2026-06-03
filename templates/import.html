@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Import{% endblock %}
+{% block body %}
+<h1>Import Donations</h1>
+<p class="sub">Upload CSV/XLSX exports from Stripe, PayPal, Zeffy, Facebook, or offline gifts.</p>
+
+<div class="card" style="margin-bottom:20px">
+  <strong>How it will work (Phase 1 target):</strong>
+  <ol style="margin:8px 0 0;padding-left:20px">
+    <li>Pick the source and upload the export file.</li>
+    <li>The matching column-map template (docs/column-mappings/) lines up their columns to our standard fields.</li>
+    <li>Data is normalized — dates to ISO, money to cents, emails/phones cleaned.</li>
+    <li>The matching ladder finds existing donors (email → name+address → name+phone) or stages new ones.</li>
+    <li>You review the batch before committing; nothing lands until you approve.</li>
+    <li>Every gift keeps its import-batch ID so a batch can be rolled back.</li>
+  </ol>
+  <p class="muted" style="margin-bottom:0">The upload-and-map UI is wired next. The demo batches below show how history will read.</p>
+</div>
+
+<form class="inline" style="margin-bottom:20px;opacity:.6" onsubmit="return false">
+  <select disabled><option>Choose source…</option></select>
+  <input type="text" disabled placeholder="Select file… (coming next)">
+  <button class="btn" disabled>Upload &amp; Map</button>
+</form>
+
+<h2>Import History</h2>
+<table>
+  <tr><th>When</th><th>File</th><th>Source</th><th>Status</th><th class="right">Rows</th><th class="right">Imported</th><th class="right">Skipped</th></tr>
+  {% for b in batches %}
+  <tr>
+    <td>{{ b.created_at }}</td><td>{{ b.filename }}</td><td>{{ b.source or '—' }}</td>
+    <td><span class="pill">{{ b.status }}</span></td>
+    <td class="right">{{ b.row_count }}</td><td class="right">{{ b.imported_count }}</td><td class="right">{{ b.skipped_count }}</td>
+  </tr>
+  {% else %}<tr><td colspan="7" class="muted">No imports yet.</td></tr>{% endfor %}
+</table>
+{% endblock %}

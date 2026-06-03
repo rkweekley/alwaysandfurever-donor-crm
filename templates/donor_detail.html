@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}{{ d.first_name }} {{ d.last_name }}{% endblock %}
+{% block body %}
+{% set display = (d.first_name ~ ' ' ~ d.last_name)|trim or d.organization_name or d.household_name or '(unnamed)' %}
+<p class="sub"><a href="{{ url_for('donors') }}">← All donors</a></p>
+<h1>{{ display }} <span class="pill">{{ d.donor_type }}</span>
+    {% if d.is_recurring_donor %}<span class="pill">monthly donor</span>{% endif %}</h1>
+
+<div class="grid cards" style="margin-top:14px">
+  <div class="card"><div class="label">Lifetime Giving</div><div class="stat">{{ d.donation_total_cents|money }}</div></div>
+  <div class="card"><div class="label">Gifts</div><div class="stat">{{ d.gift_count }}</div></div>
+  <div class="card"><div class="label">Largest Gift</div><div class="stat">{{ d.largest_gift_cents|money }}</div></div>
+  <div class="card"><div class="label">First / Last</div><div style="font-size:14px;margin-top:6px">{{ d.first_gift_date or '—' }}<br>{{ d.last_gift_date or '—' }}</div></div>
+</div>
+
+<div class="flex" style="margin-top:8px">
+  <div class="col">
+    <h2>Contact</h2>
+    <div class="card">
+      <div><strong>Email:</strong> {{ d.primary_email or '—' }}
+        {% for e in emails %}{% if not e.is_primary %}<br><span class="muted">alt:</span> {{ e.email }}{% endif %}{% endfor %}</div>
+      <div><strong>Phone:</strong> {{ d.primary_phone or '—' }}
+        {% for p in phones %}{% if not p.is_primary %}<br><span class="muted">alt:</span> {{ p.phone }}{% endif %}{% endfor %}</div>
+      <div style="margin-top:6px"><strong>Address:</strong><br>
+        {% if d.address_line1 %}{{ d.address_line1 }}{% if d.address_line2 %}, {{ d.address_line2 }}{% endif %}<br>
+        {{ d.city }}{% if d.state %}, {{ d.state }}{% endif %} {{ d.postal_code }}{% else %}<span class="muted">No mailing address on file.</span>{% endif %}</div>
+      <div style="margin-top:6px"><strong>Preferred contact:</strong> {{ d.preferred_contact or '—' }}</div>
+      {% if tags %}<div style="margin-top:8px">{% for t in tags %}<span class="pill">{{ t.name }}</span> {% endfor %}</div>{% endif %}
+    </div>
+  </div>
+  <div class="col">
+    <h2>Add Note</h2>
+    <div class="card">
+      <form method="post" action="{{ url_for('add_note', donor_id=d.id) }}">
+        <div style="margin-bottom:8px"><textarea name="note_text" rows="3" style="width:100%" placeholder="e.g. Called to thank donor; interested in medical fund"></textarea></div>
+        <div class="inline">
+          <select name="note_type">
+            <option value="general">General</option>
+            <option value="call">Call</option>
+            <option value="email">Email</option>
+            <option value="meeting">Meeting</option>
+            <option value="prospect">Prospect</option>
+            <option value="preference">Preference</option>
+          </select>
+          <label class="muted"><input type="checkbox" name="follow_up_needed"> follow-up</label>
+          <input type="date" name="follow_up_date">
+          <button class="btn sm" type="submit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<h2>Giving History ({{ gifts|length }})</h2>
+<table>
+  <tr><th>Date</th><th>Source</th><th>Campaign</th><th>Fund</th><th>Tribute</th>
+      <th class="right">Amount</th><th class="right">Net</th><th>Receipt</th></tr>
+  {% for g in gifts %}
+  <tr>
+    <td>{{ g.donation_date }}{% if g.is_recurring %} <span class="pill">rec</span>{% endif %}{% if g.is_in_kind %} <span class="pill">in-kind</span>{% endif %}</td>
+    <td>{{ g.source or '—' }}</td>
+    <td>{{ g.campaign or '—' }}</td>
+    <td>{{ g.fund or '—' }}</td>
+    <td>{% if g.tribute_type %}{{ g.tribute_type }}{% if g.tribute_honoree %}: {{ g.tribute_honoree }}{% endif %}{% else %}—{% endif %}</td>
+    <td class="right">{{ g.amount_cents|money }}</td>
+    <td class="right">{{ g.net_cents|money }}</td>
+    <td>{% if g.receipt_status=='sent' %}<span class="pill">sent</span>{% elif g.receipt_status=='not_required' %}<span class="muted">n/a</span>{% else %}<span class="pill warn">unsent</span>{% endif %}</td>
+  </tr>
+  {% else %}<tr><td colspan="8" class="muted">No gifts recorded.</td></tr>{% endfor %}
+</table>
+
+<h2>Notes &amp; Activity ({{ notes|length }})</h2>
+<table>
+  <tr><th>Date</th><th>Type</th><th>Note</th><th>By</th><th>Follow-up</th></tr>
+  {% for n in notes %}
+  <tr>
+    <td>{{ n.note_date }}</td>
+    <td><span class="pill">{{ n.note_type or 'general' }}</span></td>
+    <td>{{ n.note_text }}</td>
+    <td class="muted">{{ n.author or '—' }}</td>
+    <td>{% if n.follow_up_needed and not n.follow_up_done %}<span class="pill warn">{{ n.follow_up_date or 'open' }}</span>{% else %}—{% endif %}</td>
+  </tr>
+  {% else %}<tr><td colspan="5" class="muted">No notes yet.</td></tr>{% endfor %}
+</table>
+{% endblock %}

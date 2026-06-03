@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Donations{% endblock %}
+{% block body %}
+<h1>Donations</h1>
+<p class="sub">{{ donations|length }} transactions · {{ total|money }} shown</p>
+
+<form class="inline" method="get" style="margin-bottom:16px">
+  <select name="source">
+    <option value="">All sources</option>
+    {% for s in sources %}<option value="{{ s.code }}" {% if s.code==f.source %}selected{% endif %}>{{ s.label }}</option>{% endfor %}
+  </select>
+  <input type="date" name="start" value="{{ f.start }}">
+  <span class="muted">to</span>
+  <input type="date" name="end" value="{{ f.end }}">
+  <button class="btn" type="submit">Filter</button>
+  {% if f.source or f.start or f.end %}<a href="{{ url_for('donations') }}" class="muted">clear</a>{% endif %}
+</form>
+
+<table>
+  <tr><th>Date</th><th>Donor</th><th>Source</th><th>Type</th>
+      <th class="right">Amount</th><th class="right">Fee</th><th class="right">Net</th></tr>
+  {% for d in donations %}
+  <tr>
+    <td>{{ d.donation_date }}</td>
+    <td><a href="{{ url_for('donor_detail', donor_id=d.donor_id) }}">{{ d.donor_name }}</a></td>
+    <td>{{ d.source or '—' }}</td>
+    <td>{% if d.is_recurring %}<span class="pill">recurring</span>{% elif d.is_in_kind %}<span class="pill">in-kind</span>{% else %}<span class="muted">one-time</span>{% endif %}</td>
+    <td class="right">{{ d.amount_cents|money }}</td>
+    <td class="right">{{ d.fee_cents|money }}</td>
+    <td class="right">{{ d.net_cents|money }}</td>
+  </tr>
+  {% else %}<tr><td colspan="7" class="muted">No donations match.</td></tr>{% endfor %}
+</table>
+{% endblock %}

@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block body %}
+<h1>Dashboard</h1>
+<p class="sub">Giving at a glance across every source.</p>
+
+<div class="grid cards">
+  <div class="card"><div class="label">Total Raised</div><div class="stat">{{ totals.gross|money }}</div></div>
+  <div class="card"><div class="label">Net After Fees</div><div class="stat">{{ totals.net|money }}</div></div>
+  <div class="card"><div class="label">Gifts</div><div class="stat">{{ totals.gift_count }}</div></div>
+  <div class="card"><div class="label">Donors</div><div class="stat">{{ donor_count }}</div></div>
+  <div class="card"><div class="label">Recurring Donors</div><div class="stat alt">{{ recurring }}</div></div>
+  <div class="card"><div class="label">Open Dup. Reviews</div><div class="stat alt">{{ open_dupes }}</div></div>
+</div>
+
+<div class="flex">
+  <div class="col">
+    <h2>By Source</h2>
+    <table>
+      <tr><th>Source</th><th class="right">Gifts</th><th class="right">Gross</th></tr>
+      {% for r in by_source %}
+      <tr><td>{{ r.label }}</td><td class="right">{{ r.gifts }}</td><td class="right">{{ r.gross|money }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+  <div class="col">
+    <h2>By Month</h2>
+    <table>
+      <tr><th>Month</th><th class="right">Gifts</th><th class="right">Gross</th></tr>
+      {% for r in by_month %}
+      <tr><td>{{ r.ym }}</td><td class="right">{{ r.gifts }}</td><td class="right">{{ r.gross|money }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+</div>
+
+<div class="flex">
+  <div class="col">
+    <h2>Recent Gifts</h2>
+    <table>
+      <tr><th>Date</th><th>Donor</th><th>Source</th><th class="right">Amount</th></tr>
+      {% for r in recent %}
+      <tr><td>{{ r.donation_date }}</td>
+          <td><a href="{{ url_for('donor_detail', donor_id=r.donor_id) }}">{{ r.donor_name }}</a></td>
+          <td>{{ r.source }}</td><td class="right">{{ r.amount_cents|money }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+  <div class="col">
+    <h2>Follow-ups Needed</h2>
+    {% if followups %}
+    <table>
+      <tr><th>Due</th><th>Donor</th><th>Note</th></tr>
+      {% for r in followups %}
+      <tr><td>{{ r.follow_up_date or '—' }}</td>
+          <td><a href="{{ url_for('donor_detail', donor_id=r.donor_id) }}">{{ r.donor_name }}</a></td>
+          <td>{{ r.note_text }}</td></tr>
+      {% endfor %}
+    </table>
+    {% else %}<p class="muted">Nothing pending. 🎉</p>{% endif %}
+  </div>
+</div>
+{% endblock %}

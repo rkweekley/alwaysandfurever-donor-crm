@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Donors{% endblock %}
+{% block body %}
+<h1>Donors</h1>
+<p class="sub">{{ donors|length }} shown. Search by name, email, phone, city, or ZIP.</p>
+
+<form class="inline" method="get" style="margin-bottom:16px">
+  <input type="search" name="q" value="{{ search }}" placeholder="Search donors…" style="min-width:260px">
+  <button class="btn" type="submit">Search</button>
+  {% if search %}<a href="{{ url_for('donors') }}" class="muted">clear</a>{% endif %}
+</form>
+
+<table>
+  <tr><th>Name</th><th>Type</th><th>Email</th><th>City</th>
+      <th class="right">Gifts</th><th class="right">Total</th><th>Recurring</th></tr>
+  {% for d in donors %}
+  <tr>
+    <td><a href="{{ url_for('donor_detail', donor_id=d.id) }}">{{ d.display_name }}</a></td>
+    <td><span class="pill">{{ d.donor_type }}</span></td>
+    <td>{{ d.primary_email or '—' }}</td>
+    <td>{{ d.city or '—' }}{% if d.state %}, {{ d.state }}{% endif %}</td>
+    <td class="right">{{ d.gift_count }}</td>
+    <td class="right">{{ d.donation_total_cents|money }}</td>
+    <td>{% if d.is_recurring_donor %}<span class="pill">monthly</span>{% else %}—{% endif %}</td>
+  </tr>
+  {% else %}
+  <tr><td colspan="7" class="muted">No donors match.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}
