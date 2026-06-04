@@ -18,6 +18,9 @@ secrets.*
 *.sqlite3
 *.db
 
+# Runtime staging for in-progress imports (never commit uploaded data)
+instance/
+
 # Python
 __pycache__/
 *.py[cod]

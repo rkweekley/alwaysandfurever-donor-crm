@@ -3,6 +3,9 @@
 Flask==3.1.3
 Werkzeug==3.1.8
 
+# CSV import: reads the column-map YAML templates at runtime.
+PyYAML==6.0.2
+
 # Production WSGI server (do NOT use the Flask dev server on the web).
 # Run with:  gunicorn -w 3 -b 127.0.0.1:8000 app:app
 gunicorn==23.0.0

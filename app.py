@@ -24,10 +24,15 @@ from flask import (
     session, abort, get_flashed_messages,
 )
 from werkzeug.security import check_password_hash, generate_password_hash
+from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
+
+import importer
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, "donor_crm.sqlite")
+# Uploaded files are staged here until a human approves them. Gitignored.
+STAGING_DIR = os.path.join(BASE_DIR, "instance", "import_staging")
 
 app = Flask(__name__)
 
@@ -516,10 +521,221 @@ def reports():
 @app.route("/import")
 @login_required
 def import_page():
-    batches = q("""SELECT b.*, s.label AS source FROM import_batches b
+    batches = q("""SELECT b.*, s.label AS source, u.display_name AS uploader
+                   FROM import_batches b
                    LEFT JOIN sources s ON s.id=b.source_id
+                   LEFT JOIN users u ON u.id=b.uploaded_by
                    ORDER BY b.created_at DESC""")
-    return render_template("import.html", batches=batches)
+    return render_template("import.html", batches=batches,
+                           sources=importer.SOURCE_TEMPLATES)
+
+
+def _import_lookups():
+    """Build code/label -> id maps the importer needs to resolve foreign keys."""
+    sources = {r["code"].lower(): r["id"] for r in q("SELECT id, code FROM sources")}
+    pmeths = {r["code"].lower(): r["id"]
+              for r in q("SELECT id, code FROM payment_methods")}
+    funds = {}
+    for r in q("SELECT id, code, label FROM funds"):
+        funds[r["code"].lower()] = r["id"]
+        funds[r["label"].lower()] = r["id"]
+    camps = {}
+    for r in q("SELECT id, code, label FROM campaigns"):
+        camps[r["code"].lower()] = r["id"]
+        camps[r["label"].lower()] = r["id"]
+    return {"sources": sources, "payment_methods": pmeths,
+            "funds": funds, "campaigns": camps}
+
+
+@app.route("/import/upload", methods=["POST"])
+@write_allowed
+def import_upload():
+    source = (request.form.get("source") or "").strip().lower()
+    if source not in importer.SOURCE_TEMPLATES:
+        flash("Pick a valid source for the file.")
+        return redirect(url_for("import_page"))
+
+    file = request.files.get("file")
+    if not file or not file.filename:
+        flash("Choose a CSV file to upload.")
+        return redirect(url_for("import_page"))
+
+    raw = file.read()
+    if not raw:
+        flash("That file is empty.")
+        return redirect(url_for("import_page"))
+    if len(raw) > importer.MAX_UPLOAD_BYTES:
+        flash("That file exceeds the 16 MB limit.")
+        return redirect(url_for("import_page"))
+
+    try:
+        rows, warnings = importer.parse_file(raw, source, _import_lookups())
+    except importer.ImportError_ as e:
+        flash(str(e))
+        return redirect(url_for("import_page"))
+    except Exception:
+        app.logger.exception("import parse failed")
+        flash("Could not read that file — check it's a valid CSV export.")
+        return redirect(url_for("import_page"))
+
+    # Stage the raw bytes on disk and create a 'reviewed' batch (no donor writes yet).
+    os.makedirs(STAGING_DIR, exist_ok=True)
+    safe_name = secure_filename(file.filename) or "upload.csv"
+    file_hash = importer.file_sha256(raw)
+    me = current_user()
+    if me is None:
+        abort(401)
+    src_id = _import_lookups()["sources"].get(source)  # None for offline (per-row)
+
+    db = get_db()
+    cur = db.execute(
+        """INSERT INTO import_batches
+           (source_id, filename, file_hash, uploaded_by, status, row_count)
+           VALUES (?,?,?,?,'reviewed',?)""",
+        (src_id, safe_name, file_hash, me["id"], len(rows)))
+    batch_id = cur.lastrowid
+    staged_path = os.path.join(STAGING_DIR, f"batch_{batch_id}.csv")
+    with open(staged_path, "wb") as fh:
+        fh.write(raw)
+    db.commit()
+
+    session[f"import_src_{batch_id}"] = source
+    return redirect(url_for("import_review", batch_id=batch_id))
+
+
+def _restage_rows(batch_id, source):
+    """Re-parse a staged file for preview/commit. Returns (rows, warnings)."""
+    staged_path = os.path.join(STAGING_DIR, f"batch_{batch_id}.csv")
+    if not os.path.isfile(staged_path):
+        return None, ["Staged file is no longer available — please re-upload."]
+    with open(staged_path, "rb") as fh:
+        raw = fh.read()
+    return importer.parse_file(raw, source, _import_lookups())
+
+
+@app.route("/import/<int:batch_id>/review")
+@login_required
+def import_review(batch_id):
+    batch = q1("""SELECT b.*, s.label AS source FROM import_batches b
+                  LEFT JOIN sources s ON s.id=b.source_id WHERE b.id=?""",
+               (batch_id,))
+    if not batch:
+        abort(404)
+    if batch["status"] != "reviewed":
+        flash("That import has already been processed.")
+        return redirect(url_for("import_page"))
+
+    source = session.get(f"import_src_{batch_id}")
+    if not source:
+        flash("This import session expired — please re-upload the file.")
+        return redirect(url_for("import_page"))
+
+    rows, warnings = _restage_rows(batch_id, source)
+    if rows is None:
+        flash(warnings[0])
+        return redirect(url_for("import_page"))
+
+    ready = [r for r in rows if not r["_issues"]]
+    flagged = [r for r in rows if r["_issues"]]
+    total_cents = sum((r["amount_cents"] or 0) for r in ready)
+    return render_template("import_review.html", batch=batch, rows=rows,
+                           ready=ready, flagged=flagged, warnings=warnings,
+                           total_cents=total_cents, money=money)
+
+
+@app.route("/import/<int:batch_id>/commit", methods=["POST"])
+@write_allowed
+def import_commit(batch_id):
+    batch = q1("SELECT * FROM import_batches WHERE id=?", (batch_id,))
+    if not batch:
+        abort(404)
+    if batch["status"] != "reviewed":
+        flash("That import has already been processed.")
+        return redirect(url_for("import_page"))
+
+    source = session.get(f"import_src_{batch_id}")
+    if not source:
+        flash("This import session expired — please re-upload the file.")
+        return redirect(url_for("import_page"))
+
+    rows, _ = _restage_rows(batch_id, source)
+    if rows is None:
+        flash("Staged file is no longer available — please re-upload.")
+        return redirect(url_for("import_page"))
+
+    db = get_db()
+    me = current_user()
+    if me is None:
+        abort(401)
+    try:
+        result = importer.commit_batch(db, batch_id, rows, me["id"])
+        db.commit()
+    except Exception:
+        db.rollback()
+        app.logger.exception("import commit failed")
+        flash("Import failed and nothing was saved. Please try again.")
+        return redirect(url_for("import_review", batch_id=batch_id))
+
+    # Clean up the staged file + session marker now that it's committed.
+    session.pop(f"import_src_{batch_id}", None)
+    staged_path = os.path.join(STAGING_DIR, f"batch_{batch_id}.csv")
+    try:
+        os.remove(staged_path)
+    except OSError:
+        pass
+
+    dup = result["dup_skipped"]
+    flash("Imported {imported} gifts ({new} new donors, {matched} matched)."
+          .format(imported=result["imported"], new=result["new_donors"],
+                  matched=result["matched_donors"])
+          + (f" Skipped {result['skipped']}"
+             + (f" ({dup} duplicates)" if dup else "") + "."
+             if result["skipped"] else ""))
+    return redirect(url_for("import_page"))
+
+
+@app.route("/import/<int:batch_id>/discard", methods=["POST"])
+@write_allowed
+def import_discard(batch_id):
+    batch = q1("SELECT * FROM import_batches WHERE id=?", (batch_id,))
+    if not batch:
+        abort(404)
+    if batch["status"] != "reviewed":
+        flash("Only a pending review can be discarded.")
+        return redirect(url_for("import_page"))
+    db = get_db()
+    db.execute("DELETE FROM import_batches WHERE id=?", (batch_id,))
+    db.commit()
+    session.pop(f"import_src_{batch_id}", None)
+    try:
+        os.remove(os.path.join(STAGING_DIR, f"batch_{batch_id}.csv"))
+    except OSError:
+        pass
+    flash("Discarded the staged import. Nothing was saved.")
+    return redirect(url_for("import_page"))
+
+
+@app.route("/import/<int:batch_id>/rollback", methods=["POST"])
+@role_required("admin")
+def import_rollback(batch_id):
+    batch = q1("SELECT * FROM import_batches WHERE id=?", (batch_id,))
+    if not batch:
+        abort(404)
+    if batch["status"] != "committed":
+        flash("Only a committed import can be rolled back.")
+        return redirect(url_for("import_page"))
+    db = get_db()
+    try:
+        result = importer.rollback_batch(db, batch_id)
+        db.commit()
+    except Exception:
+        db.rollback()
+        app.logger.exception("import rollback failed")
+        flash("Rollback failed — nothing was changed.")
+        return redirect(url_for("import_page"))
+    flash("Rolled back: removed {d} gifts and {n} donors that came in with it."
+          .format(d=result["removed_donations"], n=result["removed_donors"]))
+    return redirect(url_for("import_page"))
 
 
 # ---------------------------------------------------------------------------

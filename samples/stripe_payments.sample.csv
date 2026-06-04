@@ -1,0 +1,6 @@
+id,Created date (UTC),Amount,Fee,Currency,Customer Email,Card Name,Description,metadata[campaign],metadata[fund],metadata[first_name],metadata[last_name]
+ch_3Ka1,2026-02-03 14:22:01,100.00,3.20,usd,dchen@example.com,David Chen,Monthly gift,spring26,general,David,Chen
+ch_3Ka2,2026-02-05 09:10:44,250.00,7.55,usd,marisol.vega@example.com,Marisol Vega,One-time donation,spring26,medical,Marisol,Vega
+ch_3Ka3,02/14/2026,50.00,1.75,usd,t.okafor@example.com,Tunde Okafor,Valentine fundraiser,givingtue25,foster,Tunde,Okafor
+ch_3Ka4,2026-02-18T11:05:09Z,500.00,14.80,usd,gwen@example.com,Gwendolyn Price,Major gift,,unrestricted,Gwendolyn,Price
+ch_3Ka5,not-a-date,75.00,2.48,usd,broken.row@example.com,Bad Date,Should be flagged,,general,Bad,Date
