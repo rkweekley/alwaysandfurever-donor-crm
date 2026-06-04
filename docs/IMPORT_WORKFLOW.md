@@ -3,7 +3,7 @@
 How a platform export becomes clean donor + donation records.
 
 ```
-Export file (CSV/XLSX)
+Export file (CSV)
    │
    ▼
 [1] Upload  ──────────►  create import_batch (status=pending, store file hash)

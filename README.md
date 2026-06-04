@@ -9,8 +9,9 @@ gifts, recurring and tribute gifts — into **one clean donor profile** with sol
 reporting, search, and deduplication.
 
 > **Status:** Running Phase 1 app. A Flask web application with authentication,
-> donor/donation management, reporting, CSV/XLSX import, and a modern CRM UI —
-> hardened for public web hosting. The design docs below remain the blueprint.
+> donor/donation management, reporting, a live CSV import workflow (upload →
+> review → commit/rollback), and a modern CRM UI — hardened for public web
+> hosting. The design docs below remain the blueprint.
 
 ---
 
@@ -76,10 +77,10 @@ unless you pass `--force`.
 | `docs/DATA_MODEL.md` | Plain-English walkthrough of every table and field |
 | `docs/IMPORT_WORKFLOW.md` | Step-by-step the import/match/review pipeline |
 | `docs/REPORTS.md` | Every report we need, with the query intent behind it |
-| `docs/column-mappings/` | One mapping template per platform (Stripe, PayPal, Zeffy, …) |
+| `docs/column-mappings/` | One mapping template per platform (Stripe, PayPal, Zeffy, GiveWP, Facebook, offline) |
 | `db/schema.sql` | The full SQLite/Postgres-compatible schema |
 | `db/seed_lookups.sql` | Lookup values (sources, payment methods, funds, note types) |
-| `importers/` | Where import scripts will live (Phase 1) |
+| `importer.py` | The import engine — parses CSVs, maps columns, matches donors, stages batches |
 | `samples/` | Sanitized sample export files for testing mappings |
 | `reports/` | Saved report definitions / SQL (Phase 1+) |
 
@@ -125,10 +126,34 @@ rest from the Users page.
 
 ---
 
+## Importing your data
+
+Bring gifts in from any platform under **Import** in the sidebar. The flow never
+writes straight to your live data — every upload is staged and reviewed first.
+
+1. **Export a CSV** from your platform (Stripe, PayPal, Zeffy, GiveWP, Facebook,
+   or the offline-gifts sheet for checks/cash/in-kind).
+2. **Upload it** (up to 16 MB) and pick the source. Columns are matched
+   automatically using the templates in `docs/column-mappings/`.
+3. **Review the batch.** Each row is normalized — dates to ISO, money to cents,
+   net = amount − fee for gateways — and matched against existing donors by
+   email, then name + address, then name + phone (so repeat givers aren't
+   duplicated). Rows that can't be parsed are flagged, not silently dropped.
+4. **Commit or discard.** Committing recomputes donor totals. Duplicate
+   transactions are skipped automatically (matched on source + transaction ID).
+5. **Roll back** a committed batch any time (admin only) — it cleanly reverses
+   every gift and donor that batch created.
+
+Imports are CSV-only by design (keeps the server install lean). XLSX and direct
+API imports are Phase 2. The engine lives in `importer.py`; per-platform column
+maps live in `docs/column-mappings/*.yaml` as the single source of truth.
+
+---
+
 ## Build phases
 
 **Phase 1 — Must-have first version**
-CSV/XLSX import · column mapping · normalize · donor profiles · donation history ·
+CSV import · column mapping · normalize · donor profiles · donation history ·
 search · notes · basic reports · duplicate detection · manual merge · export to Excel/CSV
 
 **Phase 2 — Next up**
