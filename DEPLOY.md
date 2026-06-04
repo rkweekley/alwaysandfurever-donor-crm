@@ -29,6 +29,17 @@ This prints the demo login (username `ksmith`). Override the password first
 with `SEED_ADMIN_PASSWORD` if you like. For a real deployment, replace the
 demo donors with a real import and create real staff accounts.
 
+Once logged in as an admin, add the rest of your team under **Admin → Users**
+(`/users`). Each person gets one of three roles:
+
+- **admin** — full access plus user management
+- **staff** — full CRM work, no user management
+- **readonly** — view and reports only; mutations are rejected server-side
+
+Give each staffer their own account (never share a login), and use **readonly**
+for anyone who only needs to look. Deactivate accounts when people leave rather
+than deleting them, so historical "added by" attribution stays intact.
+
 ## 4. Run behind a real server
 
 Never expose Flask's dev server. Use gunicorn bound to localhost:

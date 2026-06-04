@@ -98,6 +98,33 @@ See `docs/DATA_MODEL.md` for the full field-by-field breakdown.
 
 ---
 
+## User roles & access
+
+Every account has one of three roles. Enforcement is **server-side** (route
+decorators) — hiding a nav link is never the only thing standing between a user
+and an action.
+
+| Role | Can view | Can add/edit donors, donations, notes, imports | Can manage users |
+|------|----------|-----------------------------------------------|------------------|
+| **admin** | ✔ | ✔ | ✔ |
+| **staff** | ✔ | ✔ | — |
+| **readonly** | ✔ | — | — |
+
+- **admin** — full access plus user management (`/users`): add accounts, assign
+  roles, deactivate people who leave.
+- **staff** — full day-to-day CRM work, but no access to user management.
+- **readonly** — view and run reports only; every mutating request is rejected
+  (HTTP 403), not just hidden.
+
+Guardrails: you can't deactivate your own account, and you can't deactivate the
+last active admin (so a deployment can never lock itself out). User management
+lives under **Admin → Users** in the sidebar, visible to admins only.
+
+The first admin is created by the installer (or `scripts/init_db.py`). Add the
+rest from the Users page.
+
+---
+
 ## Build phases
 
 **Phase 1 — Must-have first version**
@@ -107,7 +134,7 @@ search · notes · basic reports · duplicate detection · manual merge · expor
 **Phase 2 — Next up**
 Stripe/PayPal/Zeffy API imports · Facebook import workflow · receipt generation ·
 thank-you tracking · major-donor tracking · recurring dashboard · household giving ·
-tags/segments · Mailchimp/Flodesk integration · role-based permissions
+tags/segments · Mailchimp/Flodesk integration
 
 Tracked in detail in `docs/REQUIREMENTS.md`.
 
@@ -116,5 +143,8 @@ Tracked in detail in `docs/REQUIREMENTS.md`.
 ## A note on privacy
 
 This database holds donor PII — names, addresses, emails, phone numbers, and giving
-history. The repository is **private**. Never commit real donor exports, API keys, or
-`.env` files. The `samples/` directory is for **sanitized / fake** data only.
+history. **The code is open source, but your data never is:** never commit real
+donor exports, API keys, or `.env` files. The `.gitignore` keeps the database and
+secrets out of git; the `samples/` directory is for **sanitized / fake** data only.
+Run your live instance on a server you control, behind HTTPS, with a strong admin
+password and per-person accounts (see User roles above).

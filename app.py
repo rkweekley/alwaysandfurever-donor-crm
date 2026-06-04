@@ -23,7 +23,7 @@ from flask import (
     Flask, g, render_template, request, redirect, url_for, flash,
     session, abort, get_flashed_messages,
 )
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -118,6 +118,59 @@ def login_required(view):
     return wrapped
 
 
+# --- Role-based access control -------------------------------------------
+# Three roles (see db/schema.sql users.role):
+#   admin    — full CRM + user management
+#   staff    — full CRM (read + write), no user management
+#   readonly — view only; blocked from every mutation
+#
+# IMPORTANT: these decorators are the real security boundary. Hiding a nav
+# link or button in a template is only cosmetics — a readonly user who
+# hand-crafts a POST is still stopped here, server-side.
+def role_required(*roles):
+    """Require the logged-in user to hold one of `roles` (implies login)."""
+    def deco(view):
+        @functools.wraps(view)
+        def wrapped(*a, **kw):
+            u = current_user()
+            if u is None:
+                session.clear()
+                flash("Please sign in to continue.")
+                return redirect(url_for("login", next=request.path))
+            if u["role"] not in roles:
+                abort(403)
+            return view(*a, **kw)
+        return wrapped
+    return deco
+
+
+def write_allowed(view):
+    """Block readonly users from any mutating route (implies login)."""
+    @functools.wraps(view)
+    def wrapped(*a, **kw):
+        u = current_user()
+        if u is None:
+            session.clear()
+            flash("Please sign in to continue.")
+            return redirect(url_for("login", next=request.path))
+        if u["role"] == "readonly":
+            abort(403)
+        return view(*a, **kw)
+    return wrapped
+
+
+def can_write():
+    """Template helper: True if the current user may mutate data."""
+    u = current_user()
+    return bool(u and u["role"] != "readonly")
+
+
+def is_admin():
+    """Template helper: True if the current user is an admin."""
+    u = current_user()
+    return bool(u and u["role"] == "admin")
+
+
 # Simple in-memory login throttle: max 5 failures per (ip+username) per window.
 _LOGIN_FAILS = defaultdict(list)
 _LOGIN_MAX = 5
@@ -196,6 +249,8 @@ def csrf_token():
 
 app.jinja_env.globals["csrf_token"] = csrf_token
 app.jinja_env.globals["current_user"] = current_user
+app.jinja_env.globals["can_write"] = can_write
+app.jinja_env.globals["is_admin"] = is_admin
 
 
 @app.before_request
@@ -237,6 +292,12 @@ def security_headers(resp):
 def bad_request(e):
     return render_template("error.html", code=400,
                            message=getattr(e, "description", "Bad request.")), 400
+
+
+@app.errorhandler(403)
+def forbidden(e):
+    return render_template("error.html", code=403,
+                           message="You don't have permission to do that."), 403
 
 
 @app.errorhandler(404)
@@ -359,6 +420,7 @@ def donor_detail(donor_id):
 
 @app.route("/donors/<int:donor_id>/note", methods=["POST"])
 @login_required
+@write_allowed
 def add_note(donor_id):
     text = request.form.get("note_text", "").strip()
     if text:
@@ -458,6 +520,119 @@ def import_page():
                    LEFT JOIN sources s ON s.id=b.source_id
                    ORDER BY b.created_at DESC""")
     return render_template("import.html", batches=batches)
+
+
+# ---------------------------------------------------------------------------
+# User management (admin only)
+# ---------------------------------------------------------------------------
+VALID_ROLES = ("admin", "staff", "readonly")
+ROLE_LABELS = {
+    "admin":    "Admin — full access + user management",
+    "staff":    "Staff — full CRM, no user management",
+    "readonly": "Read-only — view only, cannot change data",
+}
+
+
+def _active_admin_count():
+    return q1("SELECT COUNT(*) AS c FROM users "
+              "WHERE role = 'admin' AND is_active = 1")["c"]
+
+
+@app.route("/users")
+@role_required("admin")
+def users():
+    rows = q("""SELECT id, username, display_name, email, role,
+                       last_login, is_active, created_at
+                FROM users ORDER BY is_active DESC, role, username""")
+    return render_template("users.html", users=rows, role_labels=ROLE_LABELS)
+
+
+@app.route("/users/new", methods=["GET", "POST"])
+@role_required("admin")
+def user_new():
+    if request.method == "POST":
+        username = (request.form.get("username") or "").strip().lower()
+        display_name = (request.form.get("display_name") or "").strip()
+        email = (request.form.get("email") or "").strip() or None
+        role = request.form.get("role") or "staff"
+        password = request.form.get("password") or ""
+        confirm = request.form.get("confirm") or ""
+
+        errors = []
+        if not username:
+            errors.append("Username is required.")
+        if not display_name:
+            errors.append("Display name is required.")
+        if role not in VALID_ROLES:
+            errors.append("Pick a valid role.")
+        if len(password) < 8:
+            errors.append("Password must be at least 8 characters.")
+        if password != confirm:
+            errors.append("Passwords don't match.")
+        if username and q1("SELECT 1 FROM users WHERE lower(username) = ?", (username,)):
+            errors.append("That username is already taken.")
+
+        if errors:
+            for e in errors:
+                flash(e)
+            return render_template("user_form.html", role_labels=ROLE_LABELS,
+                                   form={"username": username,
+                                         "display_name": display_name,
+                                         "email": email or "", "role": role})
+
+        db = get_db()
+        db.execute(
+            """INSERT INTO users (username, display_name, email, role,
+                                  password_hash, is_active)
+               VALUES (?,?,?,?,?,1)""",
+            (username, display_name, email, role,
+             generate_password_hash(password, method="pbkdf2:sha256")),
+        )
+        db.commit()
+        flash(f"User '{username}' created.")
+        return redirect(url_for("users"))
+
+    return render_template("user_form.html", role_labels=ROLE_LABELS,
+                           form={"username": "", "display_name": "",
+                                 "email": "", "role": "staff"})
+
+
+@app.route("/users/<int:user_id>/deactivate", methods=["POST"])
+@role_required("admin")
+def user_deactivate(user_id):
+    me = current_user()
+    target = q1("SELECT * FROM users WHERE id = ?", (user_id,))
+    if not target:
+        flash("User not found.")
+        return redirect(url_for("users"))
+    # Guardrail 1: can't deactivate yourself (avoids locking out the session).
+    if me and target["id"] == me["id"]:
+        flash("You can't deactivate your own account.")
+        return redirect(url_for("users"))
+    # Guardrail 2: can't remove the last active admin.
+    if (target["role"] == "admin" and target["is_active"]
+            and _active_admin_count() <= 1):
+        flash("You can't deactivate the last active admin.")
+        return redirect(url_for("users"))
+    db = get_db()
+    db.execute("UPDATE users SET is_active = 0 WHERE id = ?", (user_id,))
+    db.commit()
+    flash(f"User '{target['username']}' deactivated.")
+    return redirect(url_for("users"))
+
+
+@app.route("/users/<int:user_id>/activate", methods=["POST"])
+@role_required("admin")
+def user_activate(user_id):
+    target = q1("SELECT username FROM users WHERE id = ?", (user_id,))
+    if not target:
+        flash("User not found.")
+        return redirect(url_for("users"))
+    db = get_db()
+    db.execute("UPDATE users SET is_active = 1 WHERE id = ?", (user_id,))
+    db.commit()
+    flash(f"User '{target['username']}' reactivated.")
+    return redirect(url_for("users"))
 
 
 if __name__ == "__main__":

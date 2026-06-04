@@ -158,6 +158,10 @@
       <span class="navlabel">Tools</span>
       <a href="{{ url_for('reports') }}" class="{{ 'active' if ep == 'reports' }}"><span class="ic">▦</span> Reports</a>
       <a href="{{ url_for('import_page') }}" class="{{ 'active' if ep == 'import_page' }}"><span class="ic">↥</span> Import</a>
+      {% if is_admin() %}
+      <span class="navlabel">Admin</span>
+      <a href="{{ url_for('users') }}" class="{{ 'active' if ep in ['users','user_new'] }}"><span class="ic">⚙</span> Users</a>
+      {% endif %}
     </nav>
     <div class="foot">Always &amp; Furever<br>Donor CRM · Phase 1</div>
   </aside>

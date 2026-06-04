@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Add user{% endblock %}
+{% block body %}
+<h1>Add user</h1>
+<p class="sub">Create a staff account. They sign in with the username and password you set here.</p>
+
+<div class="panel" style="max-width:560px">
+  <form method="post" action="{{ url_for('user_new') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <label for="display_name" style="display:block;font-weight:600;margin:0 0 5px">Display name</label>
+    <input type="text" id="display_name" name="display_name" value="{{ form.display_name }}"
+           style="width:100%" autocomplete="name" required>
+
+    <label for="username" style="display:block;font-weight:600;margin:16px 0 5px">Username</label>
+    <input type="text" id="username" name="username" value="{{ form.username }}"
+           style="width:100%" autocomplete="off" required>
+    <div class="muted" style="font-size:12px;margin-top:4px">Lowercased. Used to sign in.</div>
+
+    <label for="email" style="display:block;font-weight:600;margin:16px 0 5px">Email <span class="muted">(optional)</span></label>
+    <input type="text" id="email" name="email" value="{{ form.email }}"
+           style="width:100%" autocomplete="off">
+
+    <label for="role" style="display:block;font-weight:600;margin:16px 0 5px">Role</label>
+    <select id="role" name="role" style="width:100%">
+      {% for code, lbl in role_labels.items() %}
+      <option value="{{ code }}" {{ 'selected' if form.role == code }}>{{ lbl }}</option>
+      {% endfor %}
+    </select>
+
+    <div class="flex" style="margin-top:16px">
+      <div class="col">
+        <label for="password" style="display:block;font-weight:600;margin:0 0 5px">Password</label>
+        <input type="password" id="password" name="password" style="width:100%"
+               autocomplete="new-password" required>
+        <div class="muted" style="font-size:12px;margin-top:4px">At least 8 characters.</div>
+      </div>
+      <div class="col">
+        <label for="confirm" style="display:block;font-weight:600;margin:0 0 5px">Confirm password</label>
+        <input type="password" id="confirm" name="confirm" style="width:100%"
+               autocomplete="new-password" required>
+      </div>
+    </div>
+
+    <div class="inline" style="margin-top:22px">
+      <button class="btn" type="submit">Create user</button>
+      <a href="{{ url_for('users') }}">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

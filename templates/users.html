@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Users{% endblock %}
+{% block body %}
+<div class="panel-head">
+  <div>
+    <h1>Users</h1>
+    <p class="sub">Staff accounts and their access level. Admins can add users and deactivate access.</p>
+  </div>
+  <a class="btn" href="{{ url_for('user_new') }}">+ Add user</a>
+</div>
+
+<table>
+  <tr>
+    <th>User</th><th>Username</th><th>Role</th><th>Last sign-in</th><th>Status</th><th class="right">Actions</th>
+  </tr>
+  {% set me = current_user() %}
+  {% for u in users %}
+  <tr>
+    <td>
+      <strong>{{ u.display_name }}</strong>
+      {% if u.email %}<div class="muted" style="font-size:12px">{{ u.email }}</div>{% endif %}
+    </td>
+    <td>{{ u.username }}</td>
+    <td>
+      {% if u.role == 'admin' %}<span class="pill good">admin</span>
+      {% elif u.role == 'readonly' %}<span class="pill warn">read-only</span>
+      {% else %}<span class="pill">staff</span>{% endif %}
+    </td>
+    <td class="muted">{{ u.last_login or 'never' }}</td>
+    <td>
+      {% if u.is_active %}<span class="pill good">active</span>
+      {% else %}<span class="pill warn">disabled</span>{% endif %}
+    </td>
+    <td class="right">
+      {% if u.id == me.id %}
+        <span class="muted" style="font-size:12px">you</span>
+      {% elif u.is_active %}
+        <form method="post" action="{{ url_for('user_deactivate', user_id=u.id) }}" class="inline" style="justify-content:flex-end">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn sm" type="submit" style="background:#b03535">Deactivate</button>
+        </form>
+      {% else %}
+        <form method="post" action="{{ url_for('user_activate', user_id=u.id) }}" class="inline" style="justify-content:flex-end">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn sm" type="submit" style="background:var(--brand2)">Reactivate</button>
+        </form>
+      {% endif %}
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="6" class="muted">No users yet.</td></tr>
+  {% endfor %}
+</table>
+{% endblock %}

@@ -129,7 +129,8 @@ notes · tags · related household/company · receipt history · follow-up remin
 - [ ] Household giving
 - [ ] Tags / segments for campaigns (schema present; UI pending)
 - [ ] Mailchimp / Flodesk / email integration
-- [ ] Role-based permissions (`users.role` present; enforcement pending)
+- [x] Role-based permissions — three roles (admin / staff / readonly), enforced
+  server-side via route decorators; admin-only user management at `/users`
 
 ---
 

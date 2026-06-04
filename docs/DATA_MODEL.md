@@ -78,6 +78,8 @@ Supporting: `donor_emails`, `donor_phones` (many per donor — drives matching),
 - **duplicate_candidates** — flagged possible-duplicate donor pairs awaiting review.
 - **merge_log** — audit trail of completed merges.
 - **sources / payment_methods / funds / campaigns / tribute_types** — lookups.
-- **users** — staff accounts; `role` reserved for Phase 2 permissions.
+- **users** — staff accounts; `role` is one of `admin` / `staff` / `readonly`,
+  enforced server-side (see User roles in the README). `is_active` soft-disables
+  an account without deleting its history.
 - **vw_donor_giving** — view that recomputes giving summary from raw donations
   (use it to repair/reconcile the rolling columns on `donors`).
