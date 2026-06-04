@@ -264,17 +264,47 @@ fi
 # Caddy reverse proxy for automatic HTTPS
 if [ -n "$DOMAIN" ] && need_root_for; then
     if ask_yn "Configure Caddy reverse proxy for automatic HTTPS on $DOMAIN?" "y"; then
+        # Auto-install Caddy from the official apt repo if missing (Debian/Ubuntu).
         if ! command -v caddy >/dev/null 2>&1; then
-            yellow "Caddy is not installed. Install it from https://caddyserver.com/docs/install"
-            yellow "then add this block to /etc/caddy/Caddyfile:"
-        else
-            CADDYFILE="/etc/caddy/Caddyfile"
-            BLOCK=$'\n'"$DOMAIN {"$'\n'"    reverse_proxy 127.0.0.1:$BIND_PORT"$'\n'"}"$'\n'
-            echo "$BLOCK" | $SUDO tee -a "$CADDYFILE" >/dev/null
-            $SUDO systemctl reload caddy 2>/dev/null || $SUDO systemctl restart caddy 2>/dev/null || true
-            green "Caddy configured for https://$DOMAIN"
+            if command -v apt-get >/dev/null 2>&1; then
+                yellow "Installing Caddy from the official repository..."
+                $SUDO apt-get install -y debian-keyring debian-archive-keyring apt-transport-https curl >/dev/null 2>&1 || true
+                curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/gpg.key \
+                    | $SUDO gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+                curl -1sLf https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt \
+                    | $SUDO tee /etc/apt/sources.list.d/caddy-stable.list >/dev/null
+                $SUDO apt-get update >/dev/null 2>&1
+                $SUDO apt-get install -y caddy >/dev/null 2>&1
+            fi
         fi
-        printf '\n%s {\n    reverse_proxy 127.0.0.1:%s\n}\n\n' "$DOMAIN" "$BIND_PORT"
+        if ! command -v caddy >/dev/null 2>&1; then
+            yellow "Caddy could not be installed automatically."
+            yellow "Install it from https://caddyserver.com/docs/install then add to /etc/caddy/Caddyfile:"
+            printf '\n%s {\n    encode zstd gzip\n    reverse_proxy 127.0.0.1:%s\n}\n\n' "$DOMAIN" "$BIND_PORT"
+        else
+            # Write a clean Caddyfile (overwrite, not append — idempotent across re-runs).
+            CADDYFILE="/etc/caddy/Caddyfile"
+            $SUDO tee "$CADDYFILE" >/dev/null <<CADDYEOF
+$DOMAIN {
+	encode zstd gzip
+	reverse_proxy 127.0.0.1:$BIND_PORT
+}
+CADDYEOF
+            $SUDO systemctl enable --now caddy >/dev/null 2>&1 || true
+            $SUDO systemctl reload caddy 2>/dev/null || $SUDO systemctl restart caddy 2>/dev/null || true
+            green "Caddy configured for https://$DOMAIN (Let's Encrypt cert auto-issued)."
+
+            # Lock down the firewall: allow SSH + HTTP/HTTPS only. SSH first so we don't self-lock.
+            if command -v ufw >/dev/null 2>&1; then
+                if ask_yn "Enable the ufw firewall (allow SSH/80/443, deny the rest)?" "y"; then
+                    $SUDO ufw allow 22/tcp   >/dev/null 2>&1
+                    $SUDO ufw allow 80/tcp   >/dev/null 2>&1
+                    $SUDO ufw allow 443/tcp  >/dev/null 2>&1
+                    $SUDO ufw --force enable >/dev/null 2>&1
+                    green "Firewall active: 22, 80, 443 open; gunicorn ($BIND_PORT) stays localhost-only."
+                fi
+            fi
+        fi
     fi
 fi
 
